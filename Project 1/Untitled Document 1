@@ -1,0 +1,113 @@
+1)for example: we can run the server in one terminal, and run the client in another terminal, and another client in another terminal
+
+2) user will just type command lines. for example a user can type such a command line "ps aux". then
+client will take this input, will prepare a massage (a character stream) and send it to the pipe. The server (server child) will retrieve it from the pipe and will execute it in another process by using fork and exec.
+
+3)it is only to be used in sending the result (the output of command execution) to the client. If we have a long output, you should send it in chunks of at most WSIZE. That means, a call to write (pipe, data, len) should have len=WSIZE. The last write() call, of course, can have len value that is smaller than WSIZE. WSIZE: amount to use in a single write() system call to a named pipe, while sending result from server to client. Note that it is possible that write (..., len) can return with amount written that is less than len. Therefore always check the return value and act accordingly. Please read the man page of write system call. Also the read system call.
+
+4)You can store the pids in an array in you program. Since max clients is fixed, the array size will be fixed.
+
+5)You will think and design performance experiments. 
+
+6)Same pipes should be used until client terminates.
+
+7) Question: 
+
+1. Does the output shown in the client have to match the actual output exactly? For example, when I type "ls" in my shell, output is shown in the following format:
+"file1     file2    file3
+ file4      file5"
+On my client app, however, all of them are shown in a new line, like
+"file1
+ file2
+ ..." So, is this a problem?
+
+2. Can the user run an interactive app from our interactive client? For example, can the user type in "python3" and expect to run some python commands? 
+
+Answer:
+
+1. yes, it is fine. no problem. but do not insert  extra characters while sending the output. 
+
+
+2. no. we will not run interactive applications from the interactive client. 
+
+ls output: as long as your are not modifying the command execution output before sending it through the pipe, it is fine/acceptable that you see the ls output as line-by-line in your comcli program (i.e., one filename per line).
+
+8) Question:
+    For the QUIT command, can we use the data field of the msg to pass the pid of the client? Because, when a client calls "quit", we need to delete them from the pid array of the server as well. 
+
+Answer:
+
+yes, of course, you can use. It is up to you what to include in data fields. 
+
+9)The following requirement was added to the clarifications page. 
+
+    Your server (main server and a server child) must print out at the least the following to the screen (with printf()). If you wish you can print more at the server side.
+        For each request message it receives from a client, it will print out information about the message: length of the message, type of the message, data in the message (a string). For example, if a server child process receives a command line request message, it can print: server child: mesg received: len=21, type=3, data=ls -al | wc. In this example, a command line message (COMLINE) is received. The data is a command line (newline character is included in this example). The number of characters in the data part of the message is 13: 11 (the length of the string “ls -al | wc”) + 1 (newline character) + 1 (NULL character) = 13. The header is 8 bytes long. In total the message length is 13 + 8 = 21.
+        
+10)Question:
+
+
+Even though I have implemented the functionality of WSIZE, I can't find proper commands/ways to test it. How should we approach it? Currently e.g when I set WSIZE as 15, and type a command that will list files, I get this output in client side(a portion):  
+
+/dev/mqueue/messagequeue
+
+server side:
+
+Partionining in chunks. Total bytes: 25
+
+Wrote 15 bytes. Chunk size: 15
+
+Wrote 10 bytes. Chunk size: 10
+
+.. I'm correctly writing data in 2 pieces, but seeing 25 bytes fully in the screen(client). Should we see them in 2 parts or in full size the way they are?
+
+Thanks for the feedback. 
+
+Answer:
+
+you can use a command that requires sending large output from server to client, for example: "cat afile.txt", where your afile.txt  file has quite large amount of content in it. 
+
+Question:
+
+Thanks. About seeing output in the client side, should it be in 2 pieces if it exceeds the WSIZE or the way it is without separation?
+
+Answer:
+
+it should be the way it is. WSIZE should not affect what user sees. 
+        
+11)Question:
+
+
+Currently, my app cannot use environment variables. When I type in "echo $USER", for example, I see "$USER" as output, not my user's name. Should I worry about correcting this behavior, or is this acceptable?
+The same thing happens while using wildcards too, (for example "./*").
+
+Answer:
+it is fine.  
+
+12)Question:
+
+
+"quitall" command is supposed to "cause the termination of all client processes". However, we are having difficulties showing them as terminated simultaneously for every client. Currently, the client that calls the "quitall" gets terminated instantly in our system along with all the other clients. But, the other clients are shown the change when they try to send another message or type something in the console. Is this sufficient or how should we approach this problem?
+
+Answer:
+
+all processes need to be terminated instantly (as soon as they receive a related signal): all clients, all server child processes, and the main server. You need to ensure that all processes get a signal and all can execute a signal handler (registered  a signal handler). 
+
+
+Question:
+
+I have the same question. When we 'quitall' in one terminal, it prints that 'Client is terminated' in the caller and process finishes. Even though it prints and closes in the caller terminal, and terminates all other clients connected to the server, in other terminals it does not print anything unless we write a command and touch enter. More accurately:
+Terminal1:
+Enter a command: quitall
+Client received termination signal. Terminating process.
+Terminal2:
+Enter a command:
+
+If we enter a command, it wont execute and finish in the place as server and child is closed. Is it acceptable to keep it like this or we should forward having 'Client terminated' message to all other clients and stop terminal from getting a command even though it won't work?
+
+Thanks for the feedback.
+
+Answer:
+when we type "quitall", all processes must be terminated immediately. before termination, whether they write something to the screen or not is not important. they need to terminate. and all fifos, files, etc must be deleted before termination. 
+
+

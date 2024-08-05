@@ -1,0 +1,3 @@
+/home/ali/Desktop/CS342/Project 1/server2/cmake-build-debug/CMakeFiles/server2.dir
+/home/ali/Desktop/CS342/Project 1/server2/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/ali/Desktop/CS342/Project 1/server2/cmake-build-debug/CMakeFiles/rebuild_cache.dir

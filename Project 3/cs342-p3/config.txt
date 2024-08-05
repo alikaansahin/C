@@ -1,0 +1,2 @@
+SHMEM_NAME=/mf_shmem
+SHMEM_SIZE=1048576
